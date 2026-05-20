@@ -112,7 +112,7 @@ const SCHEDULES = {
       startDay: 0,
       endWeek: 20,
       endDay: 6,
-      note: "Second trimester bloodwork",
+      note: "Second trimester bloodwork - can be collected from 14w, optimal 15-16w",
       condition: null
     },
     {
