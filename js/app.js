@@ -33,14 +33,14 @@ function navigateTo(screen) {
   } else if (screen === "edd") {
     document.getElementById("calculator-section").style.display = "block";
     document.getElementById("manual-entry-card").style.display = "block";
-    document.getElementById("clear-btn").style.display = "block";
+    //document.getElementById("clear-btn").style.display = "block";
     document.getElementById("manual-entry-heading").textContent = "Manual Entry";
   } else if (screen === "planner") {
     // Care Planner mode — show calculator, manual entry card, and full care timeline
     document.getElementById("calculator-section").style.display = "block";
     document.getElementById("manual-entry-card").style.display = "block";
     document.getElementById("care-timeline").style.display = "block";
-    document.getElementById("clear-btn").style.display = "block";
+    //document.getElementById("clear-btn").style.display = "block";
     document.getElementById("manual-entry-heading").textContent = "Enter EDD Directly";
   } else if (screen === "newborn") {
     document.getElementById("screen-newborn").style.display = "block";
@@ -594,7 +594,7 @@ function clearAll() {
   clearContractions();
 
   // Clear ROM timer and remove from localStorage
-  clearROM();
+  //clearROM();
 
   // Reopen calculator
   document.getElementById("calculator-section").style.display = "block";
@@ -1792,13 +1792,17 @@ function clearContractions() {
 function loadROMFromStorage() {
   const stored = localStorage.getItem("rm-tools-rom-datetime");
   if (stored) {
-    // Split stored ISO string back into date and time parts for the input fields
     const dt = new Date(stored);
-    const datePart = dt.toISOString().split("T")[0];
-    const timePart = dt.toTimeString().slice(0, 5);
-    document.getElementById("rom-date").value = datePart;
-    document.getElementById("rom-time").value = timePart;
-    // Auto-calculate so user sees result immediately on return
+
+    // Use local date methods consistently to avoid UTC timezone shifting the date
+    const year = dt.getFullYear();
+    const month = String(dt.getMonth() + 1).padStart(2, "0");
+    const day = String(dt.getDate()).padStart(2, "0");
+    const hours = String(dt.getHours()).padStart(2, "0");
+    const minutes = String(dt.getMinutes()).padStart(2, "0");
+
+    document.getElementById("rom-date").value = `${year}-${month}-${day}`;
+    document.getElementById("rom-time").value = `${hours}:${minutes}`;
     calculateROM();
   }
 }
