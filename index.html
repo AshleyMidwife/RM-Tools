@@ -554,6 +554,13 @@
                 <span class="tool-desc">Track frequency and duration</span>
               </div>
             </button>
+            <button class="home-tool-btn" onclick="navigateTo('rom')">
+              <span class="tool-icon">💧</span>
+              <div class="tool-info">
+                <span class="tool-name">ROM Timer</span>
+                <span class="tool-desc">Time since rupture of membranes</span>
+              </div>
+            </button>
           </div>
         </div>
 
@@ -594,6 +601,44 @@
 
             <!-- Contraction log -->
             <div id="contraction-log"></div>
+          </div>
+        </div>
+
+        <!-- ROM Timer -->
+        <div id="tool-rom" style="display: none">
+          <button class="back-btn" onclick="navigateTo('intrapartum')">← Intrapartum Tools</button>
+
+          <div class="calculator-card">
+            <div class="card-header-row">
+              <h3>ROM Timer</h3>
+              <button class="clear-card-btn" onclick="clearROM()">Clear</button>
+            </div>
+            <p class="tool-intro">Time since rupture of membranes</p>
+
+            <!-- Time of rupture input -->
+            <label for="rom-date">Date of Rupture</label>
+            <input type="date" id="rom-date" />
+
+            <label for="rom-time">Time of Rupture (24hr)</label>
+            <input type="time" id="rom-time" />
+
+            <button onclick="calculateROM()">Calculate</button>
+
+            <!-- Result appears here -->
+            <div id="rom-result"></div>
+
+            <!-- Delivery time — optional, for total ROM duration -->
+            <div id="rom-delivery-section" style="display: none">
+              <label for="rom-delivery-date">Date of Delivery</label>
+              <input type="date" id="rom-delivery-date" />
+
+              <label for="rom-delivery-time">Time of Delivery (24hr)</label>
+              <input type="time" id="rom-delivery-time" />
+
+              <button onclick="calculateROMTotal()">Calculate Total ROM Duration</button>
+
+              <div id="rom-total-result"></div>
+            </div>
           </div>
         </div>
       </section>

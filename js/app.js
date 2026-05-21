@@ -23,6 +23,7 @@ function navigateTo(screen) {
   document.getElementById("tool-contractions").style.display = "none";
   document.getElementById("screen-about").style.display = "none";
   document.getElementById("manual-entry-card").style.display = "none";
+  document.getElementById("tool-rom").style.display = "none";
 
   // Hide clear button by default
   document.getElementById("clear-btn").style.display = "none";
@@ -68,6 +69,11 @@ function navigateTo(screen) {
   } else if (screen === "contractions") {
     document.getElementById("screen-intrapartum").style.display = "block";
     document.getElementById("tool-contractions").style.display = "block";
+  } else if (screen === "rom") {
+    document.getElementById("screen-intrapartum").style.display = "block";
+    document.getElementById("tool-rom").style.display = "block";
+    // Load stored ROM time if one exists from a previous session
+    loadROMFromStorage();
   } else if (screen === "screen-about") {
     document.getElementById("screen-about").style.display = "block";
   }
@@ -586,6 +592,9 @@ function clearAll() {
 
   // Reset contraction timer
   clearContractions();
+
+  // Clear ROM timer and remove from localStorage
+  clearROM();
 
   // Reopen calculator
   document.getElementById("calculator-section").style.display = "block";
@@ -1719,6 +1728,150 @@ function clearContractions() {
   document.getElementById("timer-clock").textContent = "0:00";
   document.getElementById("contraction-log").innerHTML = "";
   document.getElementById("contraction-averages").style.display = "none";
+}
+
+// =====================
+// ROM TIMER
+// Tracks time since rupture of membranes
+// Stores ROM datetime in localStorage so it persists across sessions
+// Flags at 12h (GBS warning), 18h (GBS threshold), 24h and 48h (assess + NST + consult)
+// Optional delivery time entry calculates total ROM duration
+// =====================
+
+// Loads stored ROM datetime from localStorage and auto-calculates on screen open
+function loadROMFromStorage() {
+  const stored = localStorage.getItem("rm-tools-rom-datetime");
+  if (stored) {
+    // Split stored ISO string back into date and time parts for the input fields
+    const dt = new Date(stored);
+    const datePart = dt.toISOString().split("T")[0];
+    const timePart = dt.toTimeString().slice(0, 5);
+    document.getElementById("rom-date").value = datePart;
+    document.getElementById("rom-time").value = timePart;
+    // Auto-calculate so user sees result immediately on return
+    calculateROM();
+  }
+}
+
+function calculateROM() {
+  const dateInput = document.getElementById("rom-date").value;
+  const timeInput = document.getElementById("rom-time").value;
+
+  if (!dateInput || !timeInput) {
+    document.getElementById("rom-result").innerHTML = `
+      <div class="flag">⚠ Please enter date and time of rupture.</div>
+    `;
+    return;
+  }
+
+  const romDateTime = new Date(dateInput + "T" + timeInput + ":00");
+  const now = new Date();
+
+  // Sanity check — ROM can't be in the future
+  if (romDateTime > now) {
+    document.getElementById("rom-result").innerHTML = `
+      <div class="flag">⚠ Time of rupture cannot be in the future.</div>
+    `;
+    return;
+  }
+
+  // Store to localStorage so it persists if the app is closed
+  localStorage.setItem("rm-tools-rom-datetime", romDateTime.toISOString());
+
+  // Calculate elapsed time
+  const diffMs = now - romDateTime;
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  // Determine clinical flag based on elapsed hours
+  let flagHTML = "";
+  if (hours >= 48) {
+    flagHTML = `
+      <div class="flag">
+        🚨 ${hours}h since ROM — assessment, NST, and consultation warranted
+      </div>`;
+  } else if (hours >= 24) {
+    flagHTML = `
+      <div class="flag">
+        🚨 ${hours}h since ROM — assessment, NST, and consultation warranted
+      </div>`;
+  } else if (hours >= 18) {
+    flagHTML = `
+      <div class="flag">
+        🚨 GBS prophylaxis threshold reached (≥18h)
+      </div>`;
+  } else if (hours >= 12) {
+    flagHTML = `
+      <div class="flag">
+        ⚠ Approaching 18-hour GBS threshold
+      </div>`;
+  }
+
+  document.getElementById("rom-result").innerHTML = `
+    <div class="result">
+      <p>Time Since Rupture</p>
+      <p class="edd">${hours}h ${minutes}m</p>
+      <p class="ga">ROM: ${romDateTime.toLocaleDateString("en-CA", {
+        month: "short",
+        day: "numeric"
+      })} at ${timeInput}</p>
+    </div>
+    ${flagHTML}
+  `;
+
+  // Reveal delivery time section once a valid ROM time is entered
+  document.getElementById("rom-delivery-section").style.display = "block";
+}
+
+function calculateROMTotal() {
+  const romDate = document.getElementById("rom-date").value;
+  const romTime = document.getElementById("rom-time").value;
+  const deliveryDate = document.getElementById("rom-delivery-date").value;
+  const deliveryTime = document.getElementById("rom-delivery-time").value;
+
+  if (!deliveryDate || !deliveryTime) {
+    document.getElementById("rom-total-result").innerHTML = `
+      <div class="flag">⚠ Please enter date and time of delivery.</div>
+    `;
+    return;
+  }
+
+  const romDateTime = new Date(romDate + "T" + romTime + ":00");
+  const deliveryDateTime = new Date(deliveryDate + "T" + deliveryTime + ":00");
+
+  if (deliveryDateTime < romDateTime) {
+    document.getElementById("rom-total-result").innerHTML = `
+      <div class="flag">⚠ Delivery time cannot be before time of rupture.</div>
+    `;
+    return;
+  }
+
+  const diffMs = deliveryDateTime - romDateTime;
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  document.getElementById("rom-total-result").innerHTML = `
+    <div class="result">
+      <p>Total ROM Duration</p>
+      <p class="edd">${hours}h ${minutes}m</p>
+    </div>
+  `;
+}
+
+function clearROM() {
+  // Clear inputs and results
+  document.getElementById("rom-date").value = "";
+  document.getElementById("rom-time").value = "";
+  document.getElementById("rom-result").innerHTML = "";
+  document.getElementById("rom-delivery-date").value = "";
+  document.getElementById("rom-delivery-time").value = "";
+  document.getElementById("rom-total-result").innerHTML = "";
+  document.getElementById("rom-delivery-section").style.display = "none";
+
+  // Remove from localStorage so it doesn't reload on next visit
+  localStorage.removeItem("rm-tools-rom-datetime");
 }
 
 // ===== DISCLAIMER =====
