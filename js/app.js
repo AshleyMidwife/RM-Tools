@@ -26,7 +26,7 @@ function navigateTo(screen) {
   document.getElementById("tool-rom").style.display = "none";
 
   // Hide clear button by default
-  document.getElementById("clear-btn").style.display = "none";
+  //document.getElementById("clear-btn").style.display = "none";
 
   if (screen === "home") {
     document.getElementById("screen-home").style.display = "block";
@@ -1092,59 +1092,109 @@ function shareTimeline() {
   }
 }
 
+// Tracks whether the newborn age calculator is in hours or days mode
+let ageMode = "hours";
+
 // =====================
-// AGE IN HOURS CALCULATOR
-// Calculates newborn age in hours and minutes from birth datetime
-// Used for plotting bilirubin on the nomogram
-// Always floors to whole hours for plot point - never rounds up
+// NEWBORN AGE CALCULATOR
+// Toggle between hours mode (for bilirubin nomogram) and days mode (general age)
+// Hours mode: requires date and time, shows hours + minutes + plot at value
+// Days mode: requires date only, shows whole days of age
 // =====================
 
-function calculateAgeInHours() {
+function selectAgeMode(mode) {
+  ageMode = mode;
+
+  // Update segmented control
+  document.getElementById("btn-age-hours").classList.toggle("active", mode === "hours");
+  document.getElementById("btn-age-days").classList.toggle("active", mode === "days");
+
+  // Show or hide time input depending on mode
+  document.getElementById("age-time-section").style.display = mode === "hours" ? "block" : "none";
+
+  // Update intro text to match mode
+  document.getElementById("age-tool-intro").textContent =
+    mode === "hours" ? "For plotting bilirubin on the nomogram" : "Age in whole days from date of birth";
+
+  // Clear result when switching modes
+  document.getElementById("age-result").innerHTML = "";
+}
+
+function calculateAge() {
   const dobDate = document.getElementById("dob-date").value;
-  const dobTime = document.getElementById("dob-time").value;
 
-  // Validate inputs
-  if (!dobDate || !dobTime) {
+  if (!dobDate) {
     document.getElementById("age-result").innerHTML = `
-        <div class="flag">⚠ Please enter both date and time of birth.</div>
+      <div class="flag">⚠ Please enter date of birth.</div>
     `;
     return;
   }
 
-  // Combine date and time into a single datetime
-  const birthDateTime = new Date(`${dobDate}T${dobTime}:00`);
-  const now = new Date();
+  if (ageMode === "hours") {
+    // Hours mode — needs time as well
+    const dobTime = document.getElementById("dob-time").value;
 
-  // Check birth time isn't in the future
-  if (birthDateTime > now) {
-    document.getElementById("age-result").innerHTML = `
+    if (!dobTime) {
+      document.getElementById("age-result").innerHTML = `
+        <div class="flag">⚠ Please enter time of birth.</div>
+      `;
+      return;
+    }
+
+    const birthDateTime = new Date(`${dobDate}T${dobTime}:00`);
+    const now = new Date();
+
+    if (birthDateTime > now) {
+      document.getElementById("age-result").innerHTML = `
         <div class="flag">⚠ Date and time of birth cannot be in the future.</div>
+      `;
+      return;
+    }
+
+    const diffMs = now - birthDateTime;
+    const totalMinutes = Math.floor(diffMs / (1000 * 60));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const [birthHours, birthMinutes] = dobTime.split(":");
+
+    document.getElementById("age-result").innerHTML = `
+      <div class="result">
+        <p>Born: ${birthHours}:${birthMinutes}</p>
+        <p>Age</p>
+        <p class="edd">${hours}h ${minutes}m</p>
+        <p class="ga">Plot at: ${hours} hours</p>
+      </div>
     `;
-    return;
+  } else {
+    // Days mode — date only, no time needed
+    // Use noon to avoid any timezone edge cases shifting the date
+    const birthDate = new Date(dobDate + "T12:00:00");
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+
+    if (birthDate > today) {
+      document.getElementById("age-result").innerHTML = `
+        <div class="flag">⚠ Date of birth cannot be in the future.</div>
+      `;
+      return;
+    }
+
+    const diffMs = today - birthDate;
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    document.getElementById("age-result").innerHTML = `
+      <div class="result">
+        <p>Age</p>
+        <p class="edd">${days} ${days === 1 ? "day" : "days"} old</p>
+      </div>
+    `;
   }
+}
 
-  // Calculate difference in milliseconds
-  const diffMs = now - birthDateTime;
-
-  // Convert to hours and minutes
-  const totalMinutes = Math.floor(diffMs / (1000 * 60));
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  // Plot at is always floored to whole hours
-  const plotAt = hours;
-
-  // Grab raw 24hr time value directly from input
-  const [birthHours, birthMinutes] = dobTime.split(":");
-
-  document.getElementById("age-result").innerHTML = `
-    <div class="result">
-    <p>Born: ${birthHours}:${birthMinutes}</p>
-    <p>Age</p>
-    <p class="edd">${hours}h ${minutes}m</p>
-    <p class="ga">Plot at: ${plotAt} hours</p>
-    </div>
-    `;
+function clearAgeCalculator() {
+  document.getElementById("dob-date").value = "";
+  document.getElementById("dob-time").value = "";
+  document.getElementById("age-result").innerHTML = "";
 }
 
 function openHyperbili() {
