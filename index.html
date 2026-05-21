@@ -703,12 +703,34 @@
       </div>
 
       <!-- =====================
+       MANUAL ENTRY CARD
+       Standalone card shown in both EDD Calculator and Care Planner modes
+       In EDD mode: heading says "Manual Entry", care-timeline stays hidden
+       In Care Planner mode: heading says "Enter EDD Directly", feeds into care-timeline below
+       Result (EDD + GA) always appears below the input field
+       ===================== -->
+      <div id="manual-entry-card" style="display: none">
+        <section class="calculator-card">
+          <div class="card-header-row">
+            <h3 id="manual-entry-heading">Manual Entry</h3>
+            <button class="clear-card-btn" onclick="clearManualEntry()">Clear</button>
+          </div>
+          <p class="tool-intro">Enter a known EDD to calculate gestational age</p>
+
+          <label for="manual-edd">Enter EDD directly</label>
+          <input type="date" id="manual-edd" onchange="useManualEDD()" />
+
+          <!-- Result written here by useManualEDD() — appears below input -->
+          <div id="manual-edd-result"></div>
+        </section>
+      </div>
+      <!-- =====================
      CARE TIMELINE
      Populated when user selects an EDD
      Can also be used with manual EDD entry
      ===================== -->
       <section class="calculator-card" id="care-timeline" style="display: none">
-        <h3>Care Timeline</h3>
+        <h3 id="care-timeline-heading">Care Timeline</h3>
 
         <!-- Selected or manually entered EDD -->
         <div class="timeline-edd-row">
@@ -719,12 +741,6 @@
             <p id="timeline-ga-display" class="ga"></p>
           </div>
           <button class="use-edd-btn" onclick="openCalculator()">Edit</button>
-        </div>
-
-        <!-- Manual EDD entry -->
-        <div id="manual-edd-section">
-          <label for="manual-edd">Enter EDD directly</label>
-          <input type="date" id="manual-edd" onchange="useManualEDD()" />
         </div>
 
         <!-- NIPS toggle -->

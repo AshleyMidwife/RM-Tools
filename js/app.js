@@ -22,6 +22,7 @@ function navigateTo(screen) {
   document.getElementById("intrapartum-menu").style.display = "none";
   document.getElementById("tool-contractions").style.display = "none";
   document.getElementById("screen-about").style.display = "none";
+  document.getElementById("manual-entry-card").style.display = "none";
 
   // Hide clear button by default
   document.getElementById("clear-btn").style.display = "none";
@@ -30,11 +31,16 @@ function navigateTo(screen) {
     document.getElementById("screen-home").style.display = "block";
   } else if (screen === "edd") {
     document.getElementById("calculator-section").style.display = "block";
+    document.getElementById("manual-entry-card").style.display = "block";
     document.getElementById("clear-btn").style.display = "block";
+    document.getElementById("manual-entry-heading").textContent = "Manual Entry";
   } else if (screen === "planner") {
+    // Care Planner mode — show calculator, manual entry card, and full care timeline
     document.getElementById("calculator-section").style.display = "block";
+    document.getElementById("manual-entry-card").style.display = "block";
     document.getElementById("care-timeline").style.display = "block";
     document.getElementById("clear-btn").style.display = "block";
+    document.getElementById("manual-entry-heading").textContent = "Enter EDD Directly";
   } else if (screen === "newborn") {
     document.getElementById("screen-newborn").style.display = "block";
     document.getElementById("newborn-menu").style.display = "block";
@@ -547,6 +553,7 @@ function clearAll() {
   document.getElementById("card-lmp").style.display = "none";
   document.getElementById("card-ultrasound").style.display = "none";
   document.getElementById("card-art").style.display = "none";
+  document.getElementById("manual-entry-card").style.display = "none";
 
   // Reset all segment buttons to inactive
   document.getElementById("btn-lmp").classList.remove("active");
@@ -566,6 +573,7 @@ function clearAll() {
   includeNIPS = false;
   document.getElementById("nips-checkbox").checked = false;
   document.getElementById("manual-edd").value = "";
+  document.getElementById("manual-edd-result").innerHTML = "";
   document.getElementById("timeline-edd-display").textContent = "";
   document.getElementById("timeline-edd-source").textContent = "";
   document.getElementById("schedule-output").innerHTML = "";
@@ -584,6 +592,23 @@ function clearAll() {
   // Hide results section until next calculation
   document.getElementById("results-section").style.display = "none";
   navigateTo("home");
+}
+
+function clearManualEntry() {
+  document.getElementById("manual-edd").value = "";
+  document.getElementById("manual-edd-result").innerHTML = "";
+
+  // If working EDD came from manual entry, clear the timeline too
+  if (workingEDDSource === "Manual entry") {
+    workingEDD = null;
+    workingEDDSource = null;
+    document.getElementById("timeline-edd-display").textContent = "";
+    document.getElementById("timeline-edd-source").textContent = "";
+    document.getElementById("timeline-ga-display").textContent = "";
+    document.getElementById("schedule-output").innerHTML = "";
+    document.getElementById("share-row").style.display = "none";
+    updateEditButton();
+  }
 }
 
 function clearAgeCalculator() {
@@ -816,6 +841,9 @@ function useEDD(isoString, source) {
 
 // =====================
 // MANUAL EDD ENTRY
+// Called when user types into the "Enter EDD directly" input
+// In EDD Calculator mode: shows EDD and current GA in the manual entry card
+// In Care Planner mode: also populates the care timeline and generates the schedule
 // =====================
 function useManualEDD() {
   const input = document.getElementById("manual-edd").value;
@@ -825,11 +853,28 @@ function useManualEDD() {
   workingEDDSource = "Manual entry";
   updateEditButton();
 
-  document.getElementById("timeline-edd-display").textContent = formatDate(workingEDD);
-  document.getElementById("timeline-edd-source").textContent = "Manually entered";
+  // Calculate current GA from the entered EDD
+  const lmp = new Date(workingEDD.getTime() - 280 * 24 * 60 * 60 * 1000);
+  const today = new Date();
+  const ga = getGestationalAge(lmp, today);
 
-  generateSchedule();
-  updateGADisplay();
+  // Always write result below the input in the manual entry card
+  document.getElementById("manual-edd-result").innerHTML = `
+    <div class="result">
+      <p>Estimated Due Date</p>
+      <p class="edd">${formatDate(workingEDD)}</p>
+      <p class="ga">GA today: ${ga.weeks}w${ga.days}d</p>
+    </div>
+  `;
+
+  // If care-timeline is visible (Care Planner mode), also populate it and generate schedule
+  const careTimeline = document.getElementById("care-timeline");
+  if (careTimeline.style.display !== "none") {
+    document.getElementById("timeline-edd-display").textContent = formatDate(workingEDD);
+    document.getElementById("timeline-edd-source").textContent = "Manually entered";
+    generateSchedule();
+    updateGADisplay();
+  }
 }
 
 // =====================
