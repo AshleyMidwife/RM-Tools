@@ -376,8 +376,16 @@ const SCHEDULES = {
 // Calculates gestational age in weeks and days between two dates
 // Returns an object with weeks and days as separate numbers
 function getGestationalAge(lmpDate, today) {
-  // Total difference in milliseconds, converted to days
-  const totalDays = Math.floor((today - lmpDate) / (1000 * 60 * 60 * 24));
+  // Normalize both dates to noon so time-of-day can't shift the day count.
+  // GA advances at midnight clinically, not based on the exact clock time,
+  // so without this the calc reads a day young any time before noon.
+  const lmpNoon = new Date(lmpDate);
+  lmpNoon.setHours(12, 0, 0, 0);
+  const todayNoon = new Date(today);
+  todayNoon.setHours(12, 0, 0, 0);
+
+  // Total difference in whole days, then split into weeks + days
+  const totalDays = Math.floor((todayNoon - lmpNoon) / (1000 * 60 * 60 * 24));
   const weeks = Math.floor(totalDays / 7);
   const days = totalDays % 7;
   return { weeks, days };
