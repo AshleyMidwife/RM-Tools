@@ -72,6 +72,7 @@ function navigateTo(screen) {
   document.getElementById("newborn-menu").style.display = "none";
   document.getElementById("tool-age-in-hours").style.display = "none";
   document.getElementById("tool-weight-loss").style.display = "none";
+  document.getElementById("tool-weight-converter").style.display = "none";
   document.getElementById("screen-prenatal-tools").style.display = "none";
   document.getElementById("prenatal-tools-menu").style.display = "none";
   document.getElementById("tool-bmi").style.display = "none";
@@ -114,6 +115,9 @@ function navigateTo(screen) {
   } else if (screen === "weight-loss") {
     document.getElementById("screen-newborn").style.display = "block";
     document.getElementById("tool-weight-loss").style.display = "block";
+  } else if (screen === "weight-converter") {
+    document.getElementById("screen-newborn").style.display = "block";
+    document.getElementById("tool-weight-converter").style.display = "block";
   } else if (screen === "prenatal-tools") {
     document.getElementById("screen-prenatal-tools").style.display = "block";
     document.getElementById("prenatal-tools-menu").style.display = "block";
@@ -1395,6 +1399,50 @@ function clearWeightLoss() {
   document.getElementById("current-weight-lbs").value = "";
   document.getElementById("current-weight-oz").value = "";
   document.getElementById("weight-loss-result").innerHTML = "";
+}
+
+// =====================
+// NEWBORN WEIGHT CONVERTER
+// Live, bidirectional lbs/oz <-> grams. Reuses gramsToLbsOz() and
+// lbsOzToGrams() above so the conversion factors have one source of truth.
+// Setting a field's .value in JS doesn't re-fire its oninput, so the two
+// directions can't loop into each other.
+// =====================
+
+function convertFromGrams() {
+  const raw = document.getElementById("nb-grams").value;
+  if (raw === "") {
+    document.getElementById("nb-conv-lbs").value = "";
+    document.getElementById("nb-conv-oz").value = "";
+    return;
+  }
+  const grams = parseFloat(raw);
+  if (isNaN(grams)) return;
+
+  const { lbs, oz } = gramsToLbsOz(grams);
+  document.getElementById("nb-conv-lbs").value = lbs;
+  document.getElementById("nb-conv-oz").value = oz;
+}
+
+function convertFromLbsOz() {
+  const lbsRaw = document.getElementById("nb-conv-lbs").value;
+  const ozRaw = document.getElementById("nb-conv-oz").value;
+
+  // Both blank — clear grams too
+  if (lbsRaw === "" && ozRaw === "") {
+    document.getElementById("nb-grams").value = "";
+    return;
+  }
+
+  const lbs = parseFloat(lbsRaw) || 0;
+  const oz = parseFloat(ozRaw) || 0;
+  document.getElementById("nb-grams").value = Math.round(lbsOzToGrams(lbs, oz));
+}
+
+function clearWeightConverter() {
+  document.getElementById("nb-grams").value = "";
+  document.getElementById("nb-conv-lbs").value = "";
+  document.getElementById("nb-conv-oz").value = "";
 }
 
 // =====================

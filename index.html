@@ -205,6 +205,14 @@
               </div>
             </button>
 
+            <button class="home-tool-btn" onclick="navigateTo('weight-converter')">
+              <span class="tool-icon">🔁</span>
+              <div class="tool-info">
+                <span class="tool-name">Weight Converter</span>
+                <span class="tool-desc">lbs/oz ⇄ grams</span>
+              </div>
+            </button>
+
             <button class="home-tool-btn coming-soon">
               <span class="tool-icon">⚖️</span>
               <div class="tool-info">
@@ -553,6 +561,34 @@
           <button onclick="calculateWeightLoss()">Calculate</button>
 
           <div id="weight-loss-result"></div>
+        </div>
+      </div>
+
+      <!-- Newborn Weight Converter -->
+      <div id="tool-weight-converter" style="display: none">
+        <button class="back-btn" onclick="navigateTo('newborn')">← Newborn Tools</button>
+
+        <div class="calculator-card">
+          <div class="card-header-row">
+            <h3>Weight Converter</h3>
+            <button class="clear-card-btn" onclick="clearWeightConverter()">Clear</button>
+          </div>
+          <p class="tool-intro">Type in either field — the other converts as you go</p>
+
+          <label for="nb-grams">Grams</label>
+          <input type="number" id="nb-grams" min="0" placeholder="e.g. 3400" oninput="convertFromGrams()" />
+
+          <label>Pounds &amp; Ounces</label>
+          <div class="ga-input-row">
+            <div class="ga-input-group">
+              <input type="number" id="nb-conv-lbs" min="0" placeholder="lbs" oninput="convertFromLbsOz()" />
+              <span class="ga-label">lbs</span>
+            </div>
+            <div class="ga-input-group">
+              <input type="number" id="nb-conv-oz" min="0" max="15" placeholder="oz" oninput="convertFromLbsOz()" />
+              <span class="ga-label">oz</span>
+            </div>
+          </div>
         </div>
       </div>
 
