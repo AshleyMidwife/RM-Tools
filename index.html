@@ -578,6 +578,13 @@
                 <span class="tool-desc">Time since rupture of membranes</span>
               </div>
             </button>
+            <button class="home-tool-btn" onclick="navigateTo('eventlog')">
+              <span class="tool-icon">📋</span>
+              <div class="tool-info">
+                <span class="tool-name">Event Logger</span>
+                <span class="tool-desc">Timestamp labour events</span>
+              </div>
+            </button>
           </div>
         </div>
 
@@ -655,6 +662,30 @@
               <button onclick="calculateROMTotal()">Calculate Total ROM Duration</button>
 
               <div id="rom-total-result"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Intrapartum Event Logger -->
+        <div id="tool-eventlog" style="display: none">
+          <button class="back-btn" onclick="navigateTo('intrapartum')">← Intrapartum Tools</button>
+
+          <div class="calculator-card">
+            <div class="card-header-row">
+              <h3>Event Logger</h3>
+              <button class="clear-card-btn" id="event-clear-btn" onclick="clearEventLog()">Clear</button>
+            </div>
+            <p class="tool-intro">Tap to timestamp labour events. The time is captured the instant you tap.</p>
+
+            <!-- Tap grid — built by renderEventButtons() -->
+            <div id="event-grid" class="event-grid"></div>
+
+            <!-- Logged events, chronological -->
+            <div id="event-log" class="event-log"></div>
+
+            <!-- Copy out -->
+            <div class="share-row" style="display: flex">
+              <button class="share-btn" id="event-copy-btn" onclick="copyEventLog()">Copy Log</button>
             </div>
           </div>
         </div>

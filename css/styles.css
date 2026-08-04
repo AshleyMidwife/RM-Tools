@@ -1150,3 +1150,100 @@ Title and clear button on same line
   background-color: #3a3a5c;
   color: #d97706;
 }
+
+/* ===== EVENT LOGGER ===== */
+.event-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.event-btn {
+  background-color: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    transform 0.1s ease;
+  min-height: 64px;
+}
+
+.event-btn:active {
+  transform: scale(0.97);
+  background-color: var(--accent);
+  color: #1a1a2e;
+}
+
+.event-log-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.event-log-item:last-child {
+  border-bottom: none;
+}
+
+/* Amber flash marks the most recently tapped row for feedback */
+.event-log-item-new {
+  background-color: rgba(245, 158, 11, 0.18);
+}
+
+.event-log-time {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.event-log-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.event-log-label {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.event-detail-input {
+  background-color: var(--bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+.event-delete-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.event-delete-btn:active {
+  color: #ef4444;
+}
+
+/* Armed state for the two-step clear */
+.clear-card-btn.armed {
+  background-color: #ef4444;
+  color: white;
+}

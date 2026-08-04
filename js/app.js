@@ -1,4 +1,63 @@
 // =====================
+// SCREEN WAKE LOCK
+// Keeps the screen awake on clinical timing screens so the phone doesn't
+// lock mid-labour. The browser auto-releases the lock whenever the page is
+// backgrounded, so we re-acquire on visibilitychange while it's still wanted.
+// Must sit at the top of the file: navigateTo("home") runs on load and calls
+// disableWakeLock(), so these variables have to exist first.
+// =====================
+let wakeLock = null;
+let wakeLockWanted = false; // true only while on a screen that needs it
+
+async function requestWakeLock() {
+  if (!("wakeLock" in navigator)) return; // unsupported browser — silently skip
+  try {
+    wakeLock = await navigator.wakeLock.request("screen");
+    wakeLock.addEventListener("release", () => {
+      wakeLock = null;
+    });
+  } catch (err) {
+    console.warn("Wake lock request failed:", err.message);
+  }
+}
+
+async function releaseWakeLock() {
+  if (wakeLock) {
+    try {
+      await wakeLock.release();
+    } catch (err) {
+      console.warn("Wake lock release failed:", err.message);
+    }
+    wakeLock = null;
+  }
+}
+
+function enableWakeLock() {
+  wakeLockWanted = true;
+  requestWakeLock();
+}
+
+function disableWakeLock() {
+  wakeLockWanted = false;
+  releaseWakeLock();
+}
+
+// Re-acquire on return to foreground, but only if still on a screen that wants it
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && wakeLockWanted) {
+    requestWakeLock();
+  }
+});
+
+// The browser drops the lock when the page is hidden; re-acquire on return,
+// but only if we're still on a screen that wants it.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && wakeLockWanted) {
+    requestWakeLock();
+  }
+});
+
+// =====================
 // NAVIGATION
 // Shows the correct screen based on button tapped
 // Manages Clear button visibility
@@ -24,7 +83,11 @@ function navigateTo(screen) {
   document.getElementById("screen-about").style.display = "none";
   document.getElementById("manual-entry-card").style.display = "none";
   document.getElementById("tool-rom").style.display = "none";
+  document.getElementById("tool-eventlog").style.display = "none";
 
+  // Release the wake lock on every navigation; the eventlog branch re-acquires
+  // it, so the screen only stays awake on that one tool.
+  disableWakeLock();
   // Hide clear button by default
   //document.getElementById("clear-btn").style.display = "none";
 
@@ -69,11 +132,17 @@ function navigateTo(screen) {
   } else if (screen === "contractions") {
     document.getElementById("screen-intrapartum").style.display = "block";
     document.getElementById("tool-contractions").style.display = "block";
+    enableWakeLock();
   } else if (screen === "rom") {
     document.getElementById("screen-intrapartum").style.display = "block";
     document.getElementById("tool-rom").style.display = "block";
     // Load stored ROM time if one exists from a previous session
     loadROMFromStorage();
+  } else if (screen === "eventlog") {
+    document.getElementById("screen-intrapartum").style.display = "block";
+    document.getElementById("tool-eventlog").style.display = "block";
+    loadEventLog();
+    enableWakeLock();
   } else if (screen === "screen-about") {
     document.getElementById("screen-about").style.display = "block";
   }
@@ -1934,6 +2003,183 @@ function clearROM() {
 
   // Remove from localStorage so it doesn't reload on next visit
   localStorage.removeItem("rm-tools-rom-datetime");
+}
+
+// =====================
+// INTRAPARTUM EVENT LOGGER
+// One-tap timestamping of labour events. The timestamp is captured the instant
+// you tap — detail (oxytocin dose, custom note) is typed afterward so the time
+// is never delayed. Persists in localStorage and is deliberately NOT touched by
+// clearAll(), like the ROM timer, so an active birth timeline survives a
+// privacy-clear. Cleared only via its own two-step Clear button.
+// =====================
+
+// The quick-log events. detail:true reveals an inline field on that entry.
+const EVENT_TYPES = [
+  { label: "RM arrived on unit" },
+  { label: "Client admitted" },
+  { label: "ROM — spontaneous" },
+  { label: "ROM — artificial (AROM)" },
+  { label: "Fully dilated" },
+  { label: "Pushing" },
+  { label: "Anaesthesia consult" },
+  { label: "Anaesthesia arrives" },
+  { label: "Epidural test dose" },
+  { label: "Oxytocin started" },
+  { label: "Oxytocin dose change", detail: true, detailPlaceholder: "Dose (e.g. 4 mU/min)" },
+  { label: "RM consulted OB" },
+  { label: "OB arrives" },
+  { label: "Transfer of care to OB" },
+  { label: "Decision for CS" },
+  { label: "Incision" },
+  { label: "Delivery of head" },
+  { label: "Delivery of baby" },
+  { label: "Placenta delivered" },
+  { label: "Custom event", custom: true, detail: true, detailPlaceholder: "Describe event…" }
+];
+
+let eventLog = []; // array of { id, label, timestamp (ISO), detail }
+
+// Build the tap-button grid from EVENT_TYPES
+function renderEventButtons() {
+  const grid = document.getElementById("event-grid");
+  grid.innerHTML = EVENT_TYPES.map(
+    (t, i) => `<button class="event-btn" onclick="logEvent(${i})">${t.label}</button>`
+  ).join("");
+}
+
+// Load saved log when the screen opens
+function loadEventLog() {
+  const stored = localStorage.getItem("rm-tools-event-log");
+  eventLog = stored ? JSON.parse(stored) : [];
+  renderEventButtons();
+  renderEventLog();
+}
+
+function saveEventLog() {
+  localStorage.setItem("rm-tools-event-log", JSON.stringify(eventLog));
+}
+
+// Stamp the current time the instant the button is tapped
+function logEvent(typeIndex) {
+  const type = EVENT_TYPES[typeIndex];
+  eventLog.push({
+    id: Date.now(),
+    label: type.custom ? "Custom" : type.label,
+    timestamp: new Date().toISOString(),
+    detail: ""
+  });
+  saveEventLog();
+  renderEventLog(eventLog[eventLog.length - 1].id); // highlight the new row
+}
+
+// Attach a dose/note to a specific entry (does not re-render, so typing focus is kept)
+function updateEventDetail(id, value) {
+  const entry = eventLog.find((e) => e.id === id);
+  if (entry) {
+    entry.detail = value;
+    saveEventLog();
+  }
+}
+
+// Remove one mis-tapped entry (single tap — see note in chat about this tradeoff)
+function deleteEvent(id) {
+  eventLog = eventLog.filter((e) => e.id !== id);
+  saveEventLog();
+  renderEventLog();
+}
+
+// Local 24hr HH:MM (local methods avoid the UTC date-shift bug)
+function formatEventTime(iso) {
+  const d = new Date(iso);
+  const h = String(d.getHours()).padStart(2, "0");
+  const m = String(d.getMinutes()).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+// Render chronologically so the on-screen order matches the copied timeline
+function renderEventLog(highlightId) {
+  const container = document.getElementById("event-log");
+  if (eventLog.length === 0) {
+    container.innerHTML = `<p class="tool-intro" style="text-align:center">No events logged yet</p>`;
+    return;
+  }
+
+  const sorted = [...eventLog].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  container.innerHTML = sorted
+    .map((e) => {
+      const type = EVENT_TYPES.find((t) => t.label === e.label || (t.custom && e.label === "Custom"));
+      const supportsDetail = type && type.detail;
+      const placeholder = type && type.detailPlaceholder ? type.detailPlaceholder : "";
+      const highlight = e.id === highlightId ? " event-log-item-new" : "";
+
+      const detailField = supportsDetail
+        ? `<input type="text" class="event-detail-input" value="${e.detail.replace(/"/g, "&quot;")}"
+             placeholder="${placeholder}" oninput="updateEventDetail(${e.id}, this.value)" />`
+        : "";
+
+      return `
+        <div class="event-log-item${highlight}">
+          <span class="event-log-time">${formatEventTime(e.timestamp)}</span>
+          <div class="event-log-body">
+            <span class="event-log-label">${e.label}</span>
+            ${detailField}
+          </div>
+          <button class="event-delete-btn" onclick="deleteEvent(${e.id})" aria-label="Delete event">×</button>
+        </div>`;
+    })
+    .join("");
+}
+
+// Build plain-text timeline for copy-out
+function buildEventLogText() {
+  const sorted = [...eventLog].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  const lines = sorted.map((e) => {
+    const detail = e.detail ? ` — ${e.detail}` : "";
+    return `${formatEventTime(e.timestamp)}  ${e.label}${detail}`;
+  });
+  return "Intrapartum Event Log\n" + lines.join("\n");
+}
+
+function copyEventLog() {
+  if (eventLog.length === 0) return;
+  navigator.clipboard.writeText(buildEventLogText()).then(() => {
+    const btn = document.getElementById("event-copy-btn");
+    btn.textContent = "Copied! ✓";
+    setTimeout(() => {
+      btn.textContent = "Copy Log";
+    }, 2000);
+  });
+}
+
+// Two-step clear so a stray thumb can't wipe a birth timeline
+let eventClearArmed = false;
+let eventClearTimeout = null;
+
+function clearEventLog() {
+  const btn = document.getElementById("event-clear-btn");
+
+  if (!eventClearArmed) {
+    eventClearArmed = true;
+    btn.textContent = "Tap again to clear";
+    btn.classList.add("armed");
+    eventClearTimeout = setTimeout(() => {
+      eventClearArmed = false;
+      btn.textContent = "Clear";
+      btn.classList.remove("armed");
+    }, 4000); // auto-disarm so a much later tap can't trigger it
+    return;
+  }
+
+  clearTimeout(eventClearTimeout);
+  eventClearArmed = false;
+  btn.textContent = "Clear";
+  btn.classList.remove("armed");
+
+  eventLog = [];
+  localStorage.removeItem("rm-tools-event-log");
+  renderEventLog();
 }
 
 // ===== DISCLAIMER =====
